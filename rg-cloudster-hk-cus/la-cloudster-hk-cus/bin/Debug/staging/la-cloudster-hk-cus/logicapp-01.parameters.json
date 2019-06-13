@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "endpointClientId": {
+      "value": "9b7873f10d58bf0021b1fbcf72de98ce"
+    },
+    "endpointClientSecret": {
+      "value": "RY$N@|7xG!"
+    },
+    "endpointPassword": {
+      "value": "DcHj#i21$"
+    },
+    "endpointUrl": {
+      "value": "https://deloitteservicesdev.service-now.com/oauth_token.do"
+    },
+    "environmentCode": {
+      "value": "dev"
+    },
+    "logicAppName": {
+      "value": "logicapp-01"
+    },
+    "username": {
+      "value": "snow_biztalk_ws"
+    }
+  }
+}

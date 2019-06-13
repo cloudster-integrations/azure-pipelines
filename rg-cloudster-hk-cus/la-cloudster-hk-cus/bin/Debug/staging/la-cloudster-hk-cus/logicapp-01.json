@@ -1,0 +1,157 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "outputs": {},
+  "parameters": {
+    "endpointClientId": {
+      "type": "string"
+    },
+    "endpointClientSecret": {
+      "type": "string"
+    },
+    "endpointPassword": {
+      "type": "string"
+    },
+    "endpointUrl": {
+      "type": "string"
+    },
+    "environmentCode": {
+      "type": "string"
+    },
+    "logicAppName": {
+      "type": "string"
+    },
+    "username": {
+      "type": "string"
+    },
+    "keyvault_Connection_Name": {
+      "type": "string",
+      "defaultValue": "keyvault"
+    },
+    "keyvault_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "HemantK@cloudster.com.au"
+    },
+    "keyvault_vaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the vault"
+      },
+      "defaultValue": "kv-cloudster-hk-cus"
+    }
+  },
+  "variables": {
+    "endpointUsername": "[concat(parameters('environmentCode'), '_', parameters('username'))]"
+  },
+  "resources": [
+    {
+      "name": "[parameters('logicAppName')]",
+      "type": "Microsoft.Logic/workflows",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "[parameters('logicAppName')]"
+      },
+      "apiVersion": "2016-06-01",
+      "properties": {
+        "state": "Disabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "Get_Access_Token": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "@{parameters('endpointUrl')}",
+                "headers": {
+                  "Content-Type": "application/x-www-form-urlencoded"
+                },
+                "body": "grant_type=password&client_id=@{parameters('endpointClientId')}&client_secret=@{parameters('endpointClientSecret')}&username=@{body('Get_Username')?['value']}&password=@{body('Get_Password')?['value']}"
+              },
+              "runAfter": {
+                "Get_Password": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Get_Username": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['keyvault']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/secrets/@{encodeURIComponent('Username')}/value"
+              },
+              "runAfter": {}
+            },
+            "Get_Password": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['keyvault']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/secrets/@{encodeURIComponent('Password')}/value"
+              },
+              "runAfter": {
+                "Get_Username": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "Recurrence": {
+              "type": "Recurrence",
+              "recurrence": {
+                "frequency": "Day",
+                "interval": 1
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "keyvault": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/', 'keyvault')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('keyvault_Connection_Name'))]",
+                "connectionName": "[parameters('keyvault_Connection_Name')]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', parameters('keyvault_Connection_Name'))]"
+      ]
+    },
+    {
+      "type": "MICROSOFT.WEB/CONNECTIONS",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('keyvault_Connection_Name')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/', 'keyvault')]"
+        },
+        "displayName": "[parameters('keyvault_Connection_DisplayName')]",
+        "nonSecretParameterValues": {
+          "vaultName": "[parameters('keyvault_vaultName')]"
+        }
+      }
+    }
+  ]
+}
